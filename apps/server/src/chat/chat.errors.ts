@@ -3,7 +3,7 @@ import type { QuotaScope } from "../quota/quota.window";
 export const CHAT_ERROR_CODES = [
   "not_found", "busy", "quota_exceeded", "no_api_key",
   "refused", "upstream_auth", "upstream_credits", "upstream_rate_limited",
-  "model_unavailable", "upstream_error",
+  "model_unavailable", "upstream_unavailable", "upstream_error",
 ] as const;
 export type ChatErrorCode = (typeof CHAT_ERROR_CODES)[number];
 
@@ -31,6 +31,7 @@ export const CHAT_ERROR_STATUS: Record<ChatErrorCode, 404 | 409 | 429 | 502 | 50
   upstream_auth: 502,
   upstream_credits: 503,
   model_unavailable: 502,
+  upstream_unavailable: 503,
   upstream_rate_limited: 503,
   upstream_error: 502,
 };

@@ -42,6 +42,9 @@ const UPSTREAM_STATUS_CODES: Record<number, ChatErrorCode> = {
   402: "upstream_credits",
   404: "model_unavailable",
   429: "upstream_rate_limited",
+  // Provider overloaded/down (common on shared :free endpoints); usually transient.
+  502: "upstream_unavailable",
+  503: "upstream_unavailable",
 };
 
 function toUpstreamError(error: unknown, context: string): ChatError {
@@ -89,7 +92,12 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
         }, input.onText);
       } catch (error) {
         const chatError = toUpstreamError(error, `Model call failed for conversation ${conversation.id}`);
-        log.error("model call failed", { userId: input.userId, conversationId: conversation.id, code: chatError.code });
+        log.error("model call failed", {
+          userId: input.userId, conversationId: conversation.id, model: settings.model, code: chatError.code,
+          upstreamStatus: error instanceof UpstreamError ? error.status : null,
+          // Provider error text only (no user content); needed to diagnose upstream failures.
+          reason: error instanceof Error ? error.message.slice(0, 300) : String(error),
+        });
         throw chatError;
       }
 

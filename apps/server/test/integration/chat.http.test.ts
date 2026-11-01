@@ -102,7 +102,8 @@ describe("chat API", () => {
     const { u, conv } = await setup();
     const cases: Array<[number, string]> = [
       [401, "upstream_auth"], [403, "upstream_auth"], [402, "upstream_credits"],
-      [404, "model_unavailable"], [429, "upstream_rate_limited"], [502, "upstream_error"],
+      [404, "model_unavailable"], [429, "upstream_rate_limited"],
+      [502, "upstream_unavailable"], [503, "upstream_unavailable"], [500, "upstream_error"],
     ];
     for (const [status, code] of cases) {
       ctx.gateway.next = { error: new UpstreamError(status, `OpenRouter ${status}`) };

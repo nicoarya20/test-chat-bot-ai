@@ -11,6 +11,7 @@ export const ERROR_TEXT: Record<string, string> = {
   upstream_auth: "API key layanan tidak valid atau dinonaktifkan. Hubungi admin.",
   upstream_credits: "Kredit OpenRouter habis. Hubungi admin.",
   model_unavailable: "Model yang dipilih admin tidak tersedia. Hubungi admin.",
+  upstream_unavailable: "Model sedang kelebihan beban di penyedianya. Coba kirim ulang sebentar lagi.",
   upstream_rate_limited: "Layanan sedang sibuk. Coba lagi sebentar lagi.",
   upstream_error: "Terjadi kesalahan saat menghubungi model. Coba lagi.",
   network: "Koneksi terputus. Periksa jaringan lalu coba lagi.",
