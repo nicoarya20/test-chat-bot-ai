@@ -4,7 +4,7 @@ import { api, ApiError, json } from "../../lib/api.client";
 import type { ProviderKey } from "../../lib/api.types";
 import { errorText } from "../../lib/copy";
 
-/** Add, activate and delete Anthropic API keys (stored encrypted, shown as last 4). */
+/** Add, activate and delete OpenRouter API keys (stored encrypted, shown as last 4). */
 export function KeysTab() {
   const [items, setItems] = useState<ProviderKey[] | null>(null);
   const [label, setLabel] = useState("");
@@ -33,13 +33,13 @@ export function KeysTab() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="Tambah API key Anthropic">
+      <Card title="Tambah API key OpenRouter">
         <form onSubmit={add} className="flex flex-wrap items-end gap-3">
           <Input aria-label="Label" placeholder="Label, mis. Produksi" value={label} onChange={(e) => setLabel(e.target.value)} required className="w-48" />
-          <Input aria-label="API key" type="password" autoComplete="off" placeholder="sk-ant-…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} required className="min-w-64 flex-1" />
+          <Input aria-label="API key" type="password" autoComplete="off" placeholder="sk-or-v1-…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} required className="min-w-64 flex-1" />
           <Button type="submit" variant="primary">Simpan</Button>
         </form>
-        <p className="mt-3 text-xs text-muted">Key dienkripsi di server dan tidak pernah ditampilkan lagi. Key pertama otomatis aktif.</p>
+        <p className="mt-3 text-xs text-muted">Buat key di openrouter.ai/settings/keys. Key dienkripsi di server dan tidak pernah ditampilkan lagi. Key pertama otomatis aktif.</p>
       </Card>
       {notice && <Notice tone={notice.tone}>{notice.msg}</Notice>}
       <Card title="Key tersimpan">

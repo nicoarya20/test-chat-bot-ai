@@ -4,7 +4,9 @@ import { api, ApiError, json } from "../../lib/api.client";
 import type { AppSettings } from "../../lib/api.types";
 import { errorText } from "../../lib/copy";
 
-interface SettingsResponse { settings: AppSettings; supportedModels: string[] }
+interface SettingsResponse { settings: AppSettings; defaultModel: string }
+
+const MODELS_URL = "https://openrouter.ai/models";
 
 /** Model, system prompt and default token limits. */
 export function SettingsTab() {
@@ -26,7 +28,7 @@ export function SettingsTab() {
         defaultSessionTokenLimit: form.defaultSessionTokenLimit, defaultWeeklyTokenLimit: form.defaultWeeklyTokenLimit,
       }));
       setForm(res.settings);
-      setNotice({ msg: "Pengaturan disimpan. Model dan system prompt berlaku untuk percakapan baru.", tone: "ok" });
+      setNotice({ msg: "Pengaturan disimpan. Berlaku mulai pesan berikutnya.", tone: "ok" });
     } catch (e) {
       setNotice({ msg: errorText(e instanceof ApiError ? e.code : undefined), tone: "error" });
     }
@@ -39,11 +41,13 @@ export function SettingsTab() {
     <Card>
       <form onSubmit={save} className="flex flex-col gap-5">
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">Model</span>
-          <select value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })}
-            className="w-64 rounded-lg border border-line bg-surface px-3 py-1.5">
-            {data.supportedModels.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <span className="font-medium">Model (slug OpenRouter)</span>
+          <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })}
+            placeholder={data.defaultModel} spellCheck={false} className="w-full max-w-md font-mono" />
+          <span className="text-xs text-muted">
+            Format <code>provider/model</code>, mis. <code>{data.defaultModel}</code>. Lihat daftar di{" "}
+            <a href={MODELS_URL} target="_blank" rel="noreferrer noopener" className="underline">openrouter.ai/models</a>.
+          </span>
         </label>
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">System prompt</span>
