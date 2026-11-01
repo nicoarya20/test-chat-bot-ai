@@ -60,4 +60,8 @@ export const usageLogs = pgTable("usage_logs", {
   cacheReadTokens: integer().notNull().default(0),
   totalTokens: integer().notNull(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("usage_logs_user_created_idx").on(t.userId, t.createdAt)]);
+}, (t) => [
+  index("usage_logs_user_created_idx").on(t.userId, t.createdAt),
+  // Admin usage views filter by time across all users.
+  index("usage_logs_created_idx").on(t.createdAt),
+]);

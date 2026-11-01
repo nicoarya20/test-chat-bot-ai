@@ -10,6 +10,7 @@ import type { AppEnv, ResolveUserId } from "./http/app.types";
 import { meRoutes } from "./http/me.routes";
 import { requireAdmin, requireApproved, requireUser } from "./http/session.middleware";
 import { log } from "./logging/logger";
+import { adminUsageRoutes, meUsageRoutes } from "./usage/usage.routes";
 import type { QuotaConfig } from "./quota/quota.service";
 
 export interface AppDeps {
@@ -34,12 +35,14 @@ export function createApp(deps: AppDeps) {
   app.use("/conversations/*", authed, requireApproved);
   app.use("/admin/*", authed, requireAdmin);
 
+  app.route("/me/usage", meUsageRoutes(deps.db, deps.quota));
   app.route("/me", meRoutes(deps.db, deps.quota));
   app.route("/conversations", conversationRoutes(deps.db));
   app.route("/conversations", chatRoutes(deps.chat));
   app.route("/admin/users", adminUserRoutes(deps.db, deps.quota));
   app.route("/admin/settings", adminSettingsRoutes(deps.db));
   app.route("/admin/keys", adminKeyRoutes(deps.db, deps.encryptionKey));
+  app.route("/admin/usage", adminUsageRoutes(deps.db, deps.quota));
 
   app.onError((error, c) => {
     log.error("unhandled request error", { path: c.req.path, reason: error.message });
