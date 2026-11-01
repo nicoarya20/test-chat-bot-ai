@@ -42,10 +42,14 @@ Sign in with an email listed in `ADMIN_EMAILS`, open **Panel admin → API Key**
 OpenRouter key (create one at https://openrouter.ai/settings/keys). Chat stays unavailable
 until a key is active.
 
-The default model is `nvidia/nemotron-3-ultra-550b-a55b:free`. Keep the `:free` suffix:
-the bare slug is the paid endpoint. Free models are rate-limited per key, and all users
-share the one active key. Change the model in **Panel admin → Pengaturan** using any slug
-from https://openrouter.ai/models.
+The default model is `nvidia/nemotron-3-ultra-550b-a55b:free`. Only free models can be used:
+**Panel admin → Pengaturan → Model gratis** lists the models OpenRouter currently prices at $0
+(cached for `MODEL_CATALOG_TTL_MS`, default 1 hour). There the admin picks the default and ticks
+which others users may choose per conversation from the picker in the chat box. The server
+re-checks before every message: a choice that is no longer free falls back to the default,
+and if the default itself stops being free, chat stops with an error instead of costing money.
+Free models are rate-limited per key, and all users share the one active key. As an extra
+safeguard, set a $0 credit limit on the key in the OpenRouter dashboard.
 
 ## How limits work
 
@@ -53,7 +57,7 @@ from https://openrouter.ai/models.
 - **Weekly:** resets every Monday 00:00 at `QUOTA_TZ_OFFSET_MINUTES` (default 420 = WIB; use 480 for WITA).
 - Both must have room before a message is sent. Usage is prompt + completion tokens as reported by OpenRouter (estimated from text length if a response omits usage).
 - A reply that starts is allowed to finish (`max_tokens` never drops below `CHAT_MIN_OUTPUT_TOKENS`), so a user can go slightly over; the next message is then blocked.
-- Limits are per user. An empty value falls back to the defaults in **Panel admin → Pengaturan**.
+- Limits are per user and shared across every model the user picks. An empty value falls back to the defaults in **Panel admin → Pengaturan**.
 
 Model and system prompt changes apply from the next message, including in existing
 conversations. History is sent to the model as plain text turns.
@@ -78,11 +82,13 @@ All routes are under `/api` and require a session unless noted.
 | `/auth/*` | public | Better Auth (Google sign-in, sign-out) |
 | `GET /me` | any signed-in | Current user and quota |
 | `GET /me/usage?days=1..90` | approved | Own token usage: quota, today/week/month totals, daily series, per model (default 30 days) |
-| `GET/POST /conversations` | approved | List (`limit`, `offset`) / create |
+| `GET /models` | approved | Models the user may pick (default + allowed, free only) |
+| `GET/POST /conversations` | approved | List (`limit`, `offset`) / create (optional `model`) |
 | `GET /conversations/:id/messages` | approved | Messages (paginated) |
-| `PATCH/DELETE /conversations/:id` | approved | Rename / delete |
+| `PATCH/DELETE /conversations/:id` | approved | Rename and/or set `model` (`null` = default) / delete |
 | `POST /conversations/:id/messages` | approved | Send; SSE events `delta`, `done`, `error`, `ping` |
 | `GET /admin/users`, `PATCH /admin/users/:id` | admin | Approve/reject, role, limits |
-| `GET/PUT /admin/settings` | admin | Model, system prompt, default limits |
+| `GET/PUT /admin/settings` | admin | Default model (must be free), system prompt, default limits |
+| `GET /admin/models`, `PUT /admin/models/allowed` | admin | Free model list and the user allowlist (free models only) |
 | `GET/POST /admin/keys`, `POST /admin/keys/:id/activate`, `DELETE /admin/keys/:id` | admin | API keys (write-only secrets) |
 | `GET /admin/usage?days=1..90` | admin | Usage across all users: totals, daily series, per model, top 10 users |

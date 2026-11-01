@@ -5,6 +5,13 @@
 - "Pemakaian" page (sidebar link) showing your token usage: today/week/month totals, 5-hour and weekly limit meters with reset times, a daily input/output chart (7/30/90 days, with a table view) and a per-model breakdown.
 - Admin panel "Pemakaian" tab with usage across all users, including the top 10 users.
 - API endpoints `GET /api/me/usage` and `GET /api/admin/usage`.
+- Model picker in the chat box: users choose, per conversation, from free models the admin allows. Token limits stay the same whichever model is used.
+- Admin "Model gratis" list in Pengaturan, loaded live from OpenRouter (free models only): set the default and which models users may pick.
+
+### Changed
+- Only free OpenRouter models can be used. Paid slugs are rejected when saving, and every message re-checks: a model that stopped being free falls back to the default, and chat stops with an error if the default is no longer free.
+- The free-text model slug field in Pengaturan was replaced by the free model list.
+- New optional env `MODEL_CATALOG_TTL_MS` (default 1 hour). Run `bun run db:migrate` (adds `allowed_models` and `conversations.model`).
 
 ## [0.2.0] - 2026-11-01
 ### Changed
