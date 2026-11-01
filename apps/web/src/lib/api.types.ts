@@ -96,3 +96,7 @@ export interface AdminUsageResponse {
   byModel: ModelUsage[];
   topUsers: UserUsage[];
 }
+
+export interface FreeModel { id: string; name: string; contextLength: number; inputModalities: string[] }
+export interface UserModelsResponse { models: FreeModel[]; defaultModel: string }
+export interface AdminModelsResponse { free: FreeModel[]; allowed: string[]; defaultModel: string }

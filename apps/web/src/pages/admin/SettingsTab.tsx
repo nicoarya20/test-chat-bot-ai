@@ -3,12 +3,11 @@ import { Button, Card, Input, Notice } from "../../components/ui";
 import { api, ApiError, json } from "../../lib/api.client";
 import type { AppSettings } from "../../lib/api.types";
 import { errorText } from "../../lib/copy";
+import { ModelsSection } from "./ModelsSection";
 
 interface SettingsResponse { settings: AppSettings; defaultModel: string }
 
-const MODELS_URL = "https://openrouter.ai/models";
-
-/** Model, system prompt and default token limits. */
+/** Model choice (free only), system prompt and default token limits. */
 export function SettingsTab() {
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [form, setForm] = useState<AppSettings | null>(null);
@@ -24,7 +23,7 @@ export function SettingsTab() {
     if (!form) return;
     try {
       const res = await api<{ settings: AppSettings }>("/admin/settings", json("PUT", {
-        model: form.model, systemPrompt: form.systemPrompt,
+        systemPrompt: form.systemPrompt,
         defaultSessionTokenLimit: form.defaultSessionTokenLimit, defaultWeeklyTokenLimit: form.defaultWeeklyTokenLimit,
       }));
       setForm(res.settings);
@@ -38,38 +37,32 @@ export function SettingsTab() {
     setForm({ ...form, [key]: Math.max(0, Math.floor(Number(value) || 0)) });
 
   return (
-    <Card>
-      <form onSubmit={save} className="flex flex-col gap-5">
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">Model (slug OpenRouter)</span>
-          <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })}
-            placeholder={data.defaultModel} spellCheck={false} className="w-full max-w-md font-mono" />
-          <span className="text-xs text-muted">
-            Format <code>provider/model</code>, mis. <code>{data.defaultModel}</code>. Lihat daftar di{" "}
-            <a href={MODELS_URL} target="_blank" rel="noreferrer noopener" className="underline">openrouter.ai/models</a>.
-          </span>
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">System prompt</span>
-          <textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} rows={6}
-            placeholder="Instruksi untuk model di setiap percakapan baru (opsional)"
-            className="rounded-lg border border-line bg-surface px-3 py-2 outline-none focus:border-muted" />
-        </label>
-        <div className="flex flex-wrap gap-6">
+    <div className="space-y-4">
+      <ModelsSection />
+      <Card>
+        <form onSubmit={save} className="flex flex-col gap-5">
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">Default limit sesi 5 jam</span>
-            <Input inputMode="numeric" value={form.defaultSessionTokenLimit} onChange={(e) => num("defaultSessionTokenLimit")(e.target.value)} className="w-40" />
+            <span className="font-medium">System prompt</span>
+            <textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} rows={6}
+              placeholder="Instruksi untuk model di setiap percakapan baru (opsional)"
+              className="rounded-lg border border-line bg-surface px-3 py-2 outline-none focus:border-muted" />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">Default limit mingguan</span>
-            <Input inputMode="numeric" value={form.defaultWeeklyTokenLimit} onChange={(e) => num("defaultWeeklyTokenLimit")(e.target.value)} className="w-40" />
-          </label>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button type="submit" variant="primary">Simpan</Button>
-          {notice && <Notice tone={notice.tone}>{notice.msg}</Notice>}
-        </div>
-      </form>
-    </Card>
+          <div className="flex flex-wrap gap-6">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium">Default limit sesi 5 jam</span>
+              <Input inputMode="numeric" value={form.defaultSessionTokenLimit} onChange={(e) => num("defaultSessionTokenLimit")(e.target.value)} className="w-40" />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium">Default limit mingguan</span>
+              <Input inputMode="numeric" value={form.defaultWeeklyTokenLimit} onChange={(e) => num("defaultWeeklyTokenLimit")(e.target.value)} className="w-40" />
+            </label>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button type="submit" variant="primary">Simpan</Button>
+            {notice && <Notice tone={notice.tone}>{notice.msg}</Notice>}
+          </div>
+        </form>
+      </Card>
+    </div>
   );
 }

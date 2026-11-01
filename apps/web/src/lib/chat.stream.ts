@@ -3,7 +3,7 @@ import { createSseParser } from "./sse.parser";
 
 export interface StreamHandlers {
   onDelta: (text: string) => void;
-  onDone: (result: { messageId: string; quota: QuotaStatus }) => void;
+  onDone: (result: { messageId: string; quota: QuotaStatus; model: string; fellBack: boolean }) => void;
   onError: (error: ChatErrorPayload) => void;
 }
 

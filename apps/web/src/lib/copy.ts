@@ -16,6 +16,9 @@ export const ERROR_TEXT: Record<string, string> = {
   upstream_error: "Terjadi kesalahan saat menghubungi model. Coba lagi.",
   network: "Koneksi terputus. Periksa jaringan lalu coba lagi.",
   internal_error: "Terjadi kesalahan di server.",
+  model_not_free: "Model default sudah tidak gratis di OpenRouter. Hubungi admin.",
+  model_not_allowed: "Model itu tidak tersedia untukmu.",
+  catalog_unavailable: "Daftar model OpenRouter sedang tidak bisa diambil. Coba lagi sebentar lagi.",
   cannot_change_own_access: "Kamu tidak bisa mengubah role atau status akunmu sendiri.",
 };
 
@@ -42,4 +45,16 @@ export const USAGE_TEXT = {
   loadFailed: "Gagal memuat data pemakaian.",
   requests: "permintaan",
   periods: { today: "Hari ini", week: "Minggu ini", month: "Bulan ini" },
+} as const;
+
+export const MODEL_TEXT = {
+  pickerLabel: "Model",
+  defaultSuffix: "default",
+  image: "gambar",
+  fellBack: "Model pilihanmu sudah tidak tersedia gratis, jadi dijawab oleh model default.",
+  adminTitle: "Model gratis",
+  adminHint: "Diambil langsung dari OpenRouter (hanya yang gratis). Centang model yang boleh dipilih user; model default selalu tersedia.",
+  allowColumn: "Boleh dipilih",
+  defaultColumn: "Default",
+  saved: "Pilihan model disimpan. Berlaku mulai pesan berikutnya.",
 } as const;
