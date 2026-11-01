@@ -1,0 +1,13 @@
+{
+  "name": "test-ai-chat-bot",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:server": "bun --cwd apps/server run dev",
+    "dev:web": "bun --cwd apps/web run dev",
+    "test": "bun --cwd apps/server run test && bun --cwd apps/web run test",
+    "typecheck": "bun --cwd apps/server run typecheck && bun --cwd apps/web run typecheck",
+    "db:generate": "bun --cwd apps/server run db:generate",
+    "db:migrate": "bun --cwd apps/server run db:migrate"
+  }
+}
