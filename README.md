@@ -25,9 +25,9 @@ server (`:3000`), so cookies and OAuth stay same-origin.
    - `BETTER_AUTH_SECRET`: `openssl rand -base64 48`
    - `KEY_ENCRYPTION_KEY`: `openssl rand -base64 32` (encrypts stored API keys; changing it makes saved keys unreadable)
    - `ADMIN_EMAILS`: comma-separated emails that become approved admins on first sign-in
-   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: see below
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: see below. These must be in `apps/server/.env`; a root `.env` is not read by the server.
 4. **Migrate:** `bun run db:migrate`
-5. **Run:** `bun run dev:server` and `bun run dev:web` in two terminals, then open http://localhost:5173
+5. **Run:** `bun run dev` (starts server and web together; `dev:server` / `dev:web` run them separately), then open http://localhost:5173
 
 ### Google OAuth
 

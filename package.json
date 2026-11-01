@@ -6,6 +6,7 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "bun run --parallel dev:server dev:web",
     "dev:server": "bun run --cwd apps/server dev",
     "dev:web": "bun run --cwd apps/web dev",
     "test": "bun run --cwd apps/server test && bun run --cwd apps/web test",
