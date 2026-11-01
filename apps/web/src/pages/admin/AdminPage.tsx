@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { KeysTab } from "./KeysTab";
 import { SettingsTab } from "./SettingsTab";
+import { UsageTab } from "./UsageTab";
 import { UsersTab } from "./UsersTab";
 
 const TABS = [
   { id: "users", label: "Pengguna" },
   { id: "settings", label: "Pengaturan" },
   { id: "keys", label: "API Key" },
+  { id: "usage", label: "Pemakaian" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-/** Admin panel with users, chat settings and API key management. */
+/** Admin panel with users, chat settings, API key management and usage. */
 export function AdminPage() {
   const [tab, setTab] = useState<TabId>("users");
   return (
@@ -28,6 +30,7 @@ export function AdminPage() {
         {tab === "users" && <UsersTab />}
         {tab === "settings" && <SettingsTab />}
         {tab === "keys" && <KeysTab />}
+        {tab === "usage" && <UsageTab />}
       </div>
     </div>
   );

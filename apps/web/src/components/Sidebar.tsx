@@ -3,7 +3,7 @@ import type { ConversationsApi } from "../hooks/useConversations";
 import type { CurrentUser } from "../lib/api.types";
 import { signOut } from "../lib/auth.client";
 import { APP_NAME } from "../lib/copy";
-import { LogoutIcon, PlusIcon, SettingsIcon, Spark, TrashIcon } from "./icons";
+import { ChartIcon, LogoutIcon, PlusIcon, SettingsIcon, Spark, TrashIcon } from "./icons";
 
 interface SidebarProps {
   user: CurrentUser;
@@ -54,6 +54,9 @@ export function Sidebar({ user, conversations, onNavigate }: SidebarProps) {
         )}
       </ul>
       <div className="border-t border-line p-3">
+        <NavLink to="/usage" onClick={onNavigate} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-bubble">
+          <ChartIcon /> Pemakaian
+        </NavLink>
         {user.role === "admin" && (
           <NavLink to="/admin" onClick={onNavigate} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-bubble">
             <SettingsIcon /> Panel admin

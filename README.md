@@ -77,6 +77,7 @@ All routes are under `/api` and require a session unless noted.
 | `GET /health` | public | Liveness |
 | `/auth/*` | public | Better Auth (Google sign-in, sign-out) |
 | `GET /me` | any signed-in | Current user and quota |
+| `GET /me/usage?days=1..90` | approved | Own token usage: quota, today/week/month totals, daily series, per model (default 30 days) |
 | `GET/POST /conversations` | approved | List (`limit`, `offset`) / create |
 | `GET /conversations/:id/messages` | approved | Messages (paginated) |
 | `PATCH/DELETE /conversations/:id` | approved | Rename / delete |
@@ -84,3 +85,4 @@ All routes are under `/api` and require a session unless noted.
 | `GET /admin/users`, `PATCH /admin/users/:id` | admin | Approve/reject, role, limits |
 | `GET/PUT /admin/settings` | admin | Model, system prompt, default limits |
 | `GET/POST /admin/keys`, `POST /admin/keys/:id/activate`, `DELETE /admin/keys/:id` | admin | API keys (write-only secrets) |
+| `GET /admin/usage?days=1..90` | admin | Usage across all users: totals, daily series, per model, top 10 users |

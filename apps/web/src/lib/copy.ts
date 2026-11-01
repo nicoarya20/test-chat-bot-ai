@@ -30,3 +30,16 @@ export const STATUS_TEXT = { pending: "Menunggu", approved: "Disetujui", rejecte
 
 export const COMPOSER_PLACEHOLDER = "Tulis pesan…";
 export const NEW_CHAT_PLACEHOLDER = "Ada yang bisa dibantu hari ini?";
+
+export const USAGE_TEXT = {
+  title: "Pemakaian token",
+  adminTitle: "Pemakaian semua pengguna",
+  daily: "Token harian",
+  byModel: "Per model",
+  topUsers: "Pengguna teratas",
+  quota: "Batas pemakaian",
+  empty: "Belum ada pemakaian pada rentang ini.",
+  loadFailed: "Gagal memuat data pemakaian.",
+  requests: "permintaan",
+  periods: { today: "Hari ini", week: "Minggu ini", month: "Bulan ini" },
+} as const;

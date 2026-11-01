@@ -13,6 +13,10 @@
   --accent-strong: #c6613f;
   --danger: #b53333;
   --code-bg: #f0eee6;
+  /* Chart series (validated: CVD + contrast vs surface, light mode) */
+  --series-input: #3a6fb0;
+  --series-output: #d97757;
+  --warning: #b7791f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +32,10 @@
     --accent-strong: #e08868;
     --danger: #f07070;
     --code-bg: #1f1e1d;
+    /* Dark steps validated separately against the dark surface */
+    --series-input: #5f8bc9;
+    --series-output: #d4704f;
+    --warning: #e0a43a;
   }
 }
 
@@ -42,6 +50,9 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-series-input: var(--series-input);
+  --color-series-output: var(--series-output);
   --font-serif: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
 }
 

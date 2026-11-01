@@ -26,6 +26,9 @@ export const SettingsIcon = ({ className = "size-4" }: IconProps) => (
 export const LogoutIcon = ({ className = "size-4" }: IconProps) => (
   <svg viewBox="0 0 24 24" className={className} {...base}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></svg>
 );
+export const ChartIcon = ({ className = "size-4" }: IconProps) => (
+  <svg viewBox="0 0 24 24" className={className} {...base}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+);
 
 /** The brand spark mark. */
 export const Spark = ({ className = "" }: IconProps) => (

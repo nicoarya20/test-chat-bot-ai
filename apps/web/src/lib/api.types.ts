@@ -74,3 +74,25 @@ export interface ChatErrorPayload {
   code: string;
   details: { blockedBy: QuotaScope; resetAt: string | null } | null;
 }
+
+export interface PeriodTotal { totalTokens: number; requests: number }
+export interface UsageTotals { today: PeriodTotal; week: PeriodTotal; month: PeriodTotal }
+export interface DailyUsagePoint { date: string; inputTokens: number; outputTokens: number; totalTokens: number; requests: number }
+export interface ModelUsage { model: string; inputTokens: number; outputTokens: number; totalTokens: number; requests: number }
+export interface UserUsage { userId: string; name: string; email: string; totalTokens: number; requests: number }
+
+export interface MyUsageResponse {
+  days: number;
+  quota: QuotaStatus;
+  totals: UsageTotals;
+  daily: DailyUsagePoint[];
+  byModel: ModelUsage[];
+}
+
+export interface AdminUsageResponse {
+  days: number;
+  totals: UsageTotals;
+  daily: DailyUsagePoint[];
+  byModel: ModelUsage[];
+  topUsers: UserUsage[];
+}

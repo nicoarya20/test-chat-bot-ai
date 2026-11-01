@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+### Added
+- "Pemakaian" page (sidebar link) showing your token usage: today/week/month totals, 5-hour and weekly limit meters with reset times, a daily input/output chart (7/30/90 days, with a table view) and a per-model breakdown.
+- Admin panel "Pemakaian" tab with usage across all users, including the top 10 users.
+- API endpoints `GET /api/me/usage` and `GET /api/admin/usage`.
+
 ## [0.2.0] - 2026-11-01
 ### Changed
 - The chatbot now runs on OpenRouter instead of Anthropic. Admins add an OpenRouter API key and can pick any OpenRouter model by its slug.
