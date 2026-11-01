@@ -14,7 +14,7 @@ export function testDb(): Database {
 export async function resetDb(): Promise<void> {
   const db = testDb();
   await db.execute(sql`TRUNCATE usage_logs, messages, conversations, provider_keys, session, account, verification, "user" CASCADE`);
-  await db.execute(sql`UPDATE app_settings SET model = 'claude-opus-5-5', system_prompt = '',
+  await db.execute(sql`UPDATE app_settings SET model = 'nvidia/nemotron-3-ultra-550b-a55b:free', system_prompt = '',
     default_session_token_limit = 50000, default_weekly_token_limit = 500000 WHERE id = 1`);
 }
 

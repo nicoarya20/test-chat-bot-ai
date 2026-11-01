@@ -14,7 +14,7 @@ export function buildTestApp() {
   const gateway = new FakeGateway();
   const chat = createChatService(db, gateway, {
     encryptionKey: testEncryptionKey, quota: testQuota,
-    minOutputTokens: 4096, maxOutputTokens: 64000, effort: "medium",
+    minOutputTokens: 4096, maxOutputTokens: 64000, reasoningEffort: "low",
   });
   const app = createApp({
     db, chat, quota: testQuota, encryptionKey: testEncryptionKey,

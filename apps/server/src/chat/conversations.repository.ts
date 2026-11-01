@@ -17,9 +17,9 @@ export async function listConversations(db: Database, userId: string, page: Page
     .offset(page.offset);
 }
 
-interface NewConversation { userId: string; title: string; model: string; systemPrompt: string }
+interface NewConversation { userId: string; title: string }
 
-/** Creates a conversation with its model and system prompt frozen. */
+/** Creates a conversation owned by the user. */
 export async function createConversation(db: Database, input: NewConversation): Promise<Conversation> {
   const [row] = await db.insert(conversations).values(input).returning();
   if (!row) throw new Error("Failed to insert conversation");
@@ -60,11 +60,11 @@ export async function listMessages(db: Database, conversationId: string, page: P
 }
 
 /**
- * Full history with raw content blocks, in order. Unpaginated on purpose:
- * the model needs the whole conversation, replayed byte-for-byte.
+ * Full history as role/text turns, in order. Unpaginated on purpose:
+ * the model needs the whole conversation as context.
  */
 export async function getHistory(db: Database, conversationId: string) {
-  return db.select({ role: messages.role, content: messages.content })
+  return db.select({ role: messages.role, content: messages.text })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(asc(messages.createdAt), asc(messages.id));
@@ -72,8 +72,8 @@ export async function getHistory(db: Database, conversationId: string) {
 
 interface Exchange {
   conversationId: string;
-  user: { content: unknown; text: string };
-  assistant: { content: unknown; text: string };
+  userText: string;
+  assistantText: string;
 }
 
 /** Appends a user+assistant pair atomically so history never has a dangling turn. */
@@ -82,12 +82,10 @@ export async function appendExchange(db: Database, input: Exchange): Promise<{ a
     const now = new Date();
     // Distinct timestamps keep ordering stable even within the same millisecond.
     await tx.insert(messages).values({
-      conversationId: input.conversationId, role: "user",
-      content: input.user.content, text: input.user.text, createdAt: now,
+      conversationId: input.conversationId, role: "user", text: input.userText, createdAt: now,
     });
     const [assistant] = await tx.insert(messages).values({
-      conversationId: input.conversationId, role: "assistant",
-      content: input.assistant.content, text: input.assistant.text,
+      conversationId: input.conversationId, role: "assistant", text: input.assistantText,
       createdAt: new Date(now.getTime() + 1),
     }).returning({ id: messages.id });
     await tx.update(conversations).set({ updatedAt: sql`now()` }).where(eq(conversations.id, input.conversationId));

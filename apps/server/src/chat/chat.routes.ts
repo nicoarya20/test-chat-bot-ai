@@ -36,7 +36,7 @@ export function chatRoutes(chat: ChatService) {
         const result = await chat.sendMessage({
           userId, conversationId, text, onText: (delta) => send("delta", { text: delta }),
         });
-        send("done", { messageId: result.assistantMessageId, stopReason: result.stopReason, quota: result.quota });
+        send("done", { messageId: result.assistantMessageId, finishReason: result.finishReason, quota: result.quota });
       } catch (error) {
         if (error instanceof ChatError) {
           send("error", { code: error.code, details: error.details ?? null });

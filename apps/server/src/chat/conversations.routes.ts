@@ -4,7 +4,6 @@ import { z } from "zod";
 import type { Database } from "../db/client";
 import type { AppEnv } from "../http/app.types";
 import { pageQuery } from "../http/pagination";
-import { getSettings } from "../settings/settings.repository";
 import {
   createConversation, deleteConversation, getConversation, listConversations, listMessages, renameConversation,
 } from "./conversations.repository";
@@ -25,12 +24,9 @@ export function conversationRoutes(db: Database) {
       return c.json({ items });
     })
     .post("/", zValidator("json", titleBody), async (c) => {
-      const settings = await getSettings(db);
       const conversation = await createConversation(db, {
         userId: c.get("currentUser").id,
         title: c.req.valid("json").title.slice(0, TITLE_MAX_LENGTH),
-        model: settings.model,
-        systemPrompt: settings.systemPrompt,
       });
       return c.json({ id: conversation.id, title: conversation.title, updatedAt: conversation.updatedAt }, 201);
     })

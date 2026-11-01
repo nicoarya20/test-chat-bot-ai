@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { REASONING_EFFORTS } from "../chat/openrouter.gateway";
 
-/** Effort levels accepted by the current Claude models. */
-export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+const TEN_MINUTES_MS = 600_000;
 
 const csv = z
   .string()
@@ -23,6 +23,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   ADMIN_EMAILS: csv,
+  OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   // 32-byte key, base64-encoded. Encrypts provider API keys at rest.
   KEY_ENCRYPTION_KEY: z.string().refine((v) => Buffer.from(v, "base64").length === 32, {
     message: "KEY_ENCRYPTION_KEY must be 32 bytes encoded as base64",
@@ -33,7 +34,9 @@ const envSchema = z.object({
   CHAT_MAX_OUTPUT_TOKENS: z.coerce.number().int().positive().default(64000),
   // Floor for max_tokens so a reply can still finish when quota is nearly spent.
   CHAT_MIN_OUTPUT_TOKENS: z.coerce.number().int().positive().default(4096),
-  CHAT_EFFORT: z.enum(EFFORT_LEVELS).default("medium"),
+  // Unset = no `reasoning` param (safest across models).
+  CHAT_REASONING_EFFORT: z.enum(REASONING_EFFORTS).optional(),
+  CHAT_TIMEOUT_MS: z.coerce.number().int().positive().default(TEN_MINUTES_MS),
 });
 
 export type Env = z.infer<typeof envSchema>;

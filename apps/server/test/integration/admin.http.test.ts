@@ -5,7 +5,7 @@ import { decryptSecret } from "../../src/keys/key.cipher";
 import { buildTestApp, testEncryptionKey } from "../helpers/app";
 import { createUser, resetDb } from "../helpers/db";
 
-const FAKE_KEY = "sk-ant-test-0000000000000000wxyz"; // test-only
+const FAKE_KEY = "sk-or-v1-test-000000000000000wxyz"; // test-only
 
 describe("admin API", () => {
   beforeEach(resetDb);
@@ -34,15 +34,22 @@ describe("admin API", () => {
     expect(res.status).toBe(400);
   });
 
-  it("updates settings and rejects unsupported models", async () => {
+  it("returns the default model with current settings", async () => {
+    const admin = await createUser({ role: "admin" });
+    const body = await (await request("/admin/settings", admin.id)).json();
+    expect(body).toMatchObject({ defaultModel: "nvidia/nemotron-3-ultra-550b-a55b:free", settings: { model: "nvidia/nemotron-3-ultra-550b-a55b:free" } });
+  });
+
+  it("accepts OpenRouter slugs (incl. :variant) and rejects anything else", async () => {
     const admin = await createUser({ role: "admin" });
     const ok = await request("/admin/settings", admin.id, json("PUT", {
-      model: "claude-sonnet-5-5", defaultSessionTokenLimit: 1234, systemPrompt: "Jawab dalam bahasa Indonesia.",
+      model: "meta-llama/llama-3.3-70b-instruct:free", defaultSessionTokenLimit: 1234, systemPrompt: "Jawab dalam bahasa Indonesia.",
     }));
     expect(ok.status).toBe(200);
-    expect((await ok.json()).settings).toMatchObject({ model: "claude-sonnet-5-5", defaultSessionTokenLimit: 1234 });
-    const bad = await request("/admin/settings", admin.id, json("PUT", { model: "gpt-4" }));
-    expect(bad.status).toBe(400);
+    expect((await ok.json()).settings).toMatchObject({ model: "meta-llama/llama-3.3-70b-instruct:free", defaultSessionTokenLimit: 1234 });
+    for (const model of ["gpt-4", "a/b c", "/model", "provider/", "https://x.y/z"]) {
+      expect((await request("/admin/settings", admin.id, json("PUT", { model }))).status).toBe(400);
+    }
   });
 
   it("sets per-user limits and can clear them back to defaults", async () => {

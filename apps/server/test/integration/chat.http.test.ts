@@ -1,14 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { messages, usageLogs } from "../../src/db/schema";
+import { UpstreamError } from "../../src/chat/openrouter.gateway";
 import { encryptSecret } from "../../src/keys/key.cipher";
 import { createKey } from "../../src/keys/keys.repository";
 import { updateSettings } from "../../src/settings/settings.repository";
 import { buildTestApp, readSse, testEncryptionKey } from "../helpers/app";
 import { createUser, resetDb } from "../helpers/db";
 
-const API_KEY = "sk-ant-test-chat-000000000000"; // test-only
+const API_KEY = "sk-or-v1-test-chat-0000000000"; // test-only
+const DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
 
 describe("chat API", () => {
   let ctx: ReturnType<typeof buildTestApp>;
@@ -39,29 +40,28 @@ describe("chat API", () => {
     const saved = await ctx.db.select().from(messages).where(eq(messages.conversationId, conv.id));
     expect(saved.map((m) => [m.role, m.text])).toEqual([["user", "Apa kabar?"], ["assistant", "Halo dunia"]]);
     const call = ctx.gateway.calls[0]!;
-    expect(call).toMatchObject({ apiKey: API_KEY, model: "claude-opus-5-5", effort: "medium", maxTokens: 50000 });
+    expect(call).toMatchObject({ apiKey: API_KEY, model: DEFAULT_MODEL, reasoningEffort: "low", maxTokens: 50000 });
   });
 
-  it("replays previous assistant content blocks unchanged (thinking included)", async () => {
+  it("sends prior turns as plain role/content history", async () => {
     const { u, conv } = await setup();
     await readSse(await send(u.id, conv.id, "satu"));
     await readSse(await send(u.id, conv.id, "dua"));
-    const second = ctx.gateway.calls[1]!;
-    expect(second.messages).toHaveLength(3);
-    expect(second.messages[1]).toEqual({
-      role: "assistant",
-      content: [
-        { type: "thinking", thinking: "", signature: "sig-test" },
-        { type: "text", text: "Halo dunia", citations: null },
-      ],
-    } as never);
+    expect(ctx.gateway.calls[1]!.messages).toEqual([
+      { role: "user", content: "satu" },
+      { role: "assistant", content: "Halo dunia" },
+      { role: "user", content: "dua" },
+    ]);
   });
 
-  it("freezes the model per conversation when settings change", async () => {
+  it("applies the admin's current model and system prompt to the next message", async () => {
     const { u, conv } = await setup();
-    await updateSettings(ctx.db, { model: "claude-sonnet-5-5" });
     await readSse(await send(u.id, conv.id, "hi"));
-    expect(ctx.gateway.calls[0]!.model).toBe("claude-opus-5-5");
+    await updateSettings(ctx.db, { model: "meta-llama/llama-3.3-70b-instruct:free", systemPrompt: "Singkat saja." });
+    await readSse(await send(u.id, conv.id, "lagi"));
+    expect(ctx.gateway.calls[1]).toMatchObject({ model: "meta-llama/llama-3.3-70b-instruct:free", system: "Singkat saja." });
+    const [log] = await ctx.db.select().from(usageLogs).where(eq(usageLogs.model, "meta-llama/llama-3.3-70b-instruct:free"));
+    expect(log?.totalTokens).toBe(150);
   });
 
   it("refuses with quota_exceeded and the reset time once the session cap is spent", async () => {
@@ -91,19 +91,33 @@ describe("chat API", () => {
 
   it("records usage but saves nothing when the model refuses", async () => {
     const { u, conv } = await setup();
-    ctx.gateway.next = { stopReason: "refusal", deltas: ["partial"] };
+    ctx.gateway.next = { finishReason: "content_filter", deltas: ["partial"] };
     const events = await readSse(await send(u.id, conv.id, "bad"));
     expect(events.find((e) => e.event === "error")?.data.code).toBe("refused");
     expect(await ctx.db.select().from(messages).where(eq(messages.conversationId, conv.id))).toHaveLength(0);
     expect(await ctx.db.select().from(usageLogs).where(eq(usageLogs.userId, u.id))).toHaveLength(1);
   });
 
-  it("maps Anthropic auth failures to upstream_auth and saves nothing", async () => {
+  it("maps OpenRouter HTTP failures to chat error codes and saves nothing", async () => {
     const { u, conv } = await setup();
-    ctx.gateway.next = { error: new Anthropic.AuthenticationError(401, undefined, "invalid x-api-key", new Headers()) };
-    const events = await readSse(await send(u.id, conv.id, "hi"));
-    expect(events.find((e) => e.event === "error")?.data.code).toBe("upstream_auth");
+    const cases: Array<[number, string]> = [
+      [401, "upstream_auth"], [403, "upstream_auth"], [402, "upstream_credits"],
+      [404, "model_unavailable"], [429, "upstream_rate_limited"], [502, "upstream_error"],
+    ];
+    for (const [status, code] of cases) {
+      ctx.gateway.next = { error: new UpstreamError(status, `OpenRouter ${status}`) };
+      const events = await readSse(await send(u.id, conv.id, "hi"));
+      expect(events.find((e) => e.event === "error")?.data.code).toBe(code);
+    }
     expect(await ctx.db.select().from(messages).where(eq(messages.conversationId, conv.id))).toHaveLength(0);
+    expect(await ctx.db.select().from(usageLogs).where(eq(usageLogs.userId, u.id))).toHaveLength(0);
+  });
+
+  it("maps network/timeout failures to upstream_error", async () => {
+    const { u, conv } = await setup();
+    ctx.gateway.next = { error: new DOMException("The operation timed out.", "TimeoutError") };
+    const events = await readSse(await send(u.id, conv.id, "hi"));
+    expect(events.find((e) => e.event === "error")?.data.code).toBe("upstream_error");
   });
 
   it("rejects a second send while a reply is in flight", async () => {

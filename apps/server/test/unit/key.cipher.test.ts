@@ -7,24 +7,24 @@ const otherKey = randomBytes(32).toString("base64"); // test-only
 
 describe("key cipher", () => {
   it("round-trips a secret", () => {
-    const payload = encryptSecret("sk-ant-test-123456", key);
-    expect(decryptSecret(payload, key)).toBe("sk-ant-test-123456");
+    const payload = encryptSecret("sk-or-test-123456", key);
+    expect(decryptSecret(payload, key)).toBe("sk-or-test-123456");
   });
 
   it("does not contain the plaintext and uses a fresh IV each time", () => {
-    const a = encryptSecret("sk-ant-secret", key);
-    const b = encryptSecret("sk-ant-secret", key);
-    expect(a).not.toContain("sk-ant-secret");
+    const a = encryptSecret("sk-or-secret", key);
+    const b = encryptSecret("sk-or-secret", key);
+    expect(a).not.toContain("sk-or-secret");
     expect(a).not.toBe(b);
   });
 
   it("rejects a wrong key", () => {
-    const payload = encryptSecret("sk-ant-secret", key);
+    const payload = encryptSecret("sk-or-secret", key);
     expect(() => decryptSecret(payload, otherKey)).toThrow(/Failed to decrypt secret/);
   });
 
   it("rejects tampered ciphertext", () => {
-    const [v, iv, tag, ct] = encryptSecret("sk-ant-secret", key).split(":");
+    const [v, iv, tag, ct] = encryptSecret("sk-or-secret", key).split(":");
     const flipped = Buffer.from(ct!, "base64");
     flipped[0] = flipped[0]! ^ 0xff;
     expect(() => decryptSecret([v, iv, tag, flipped.toString("base64")].join(":"), key)).toThrow();
@@ -39,6 +39,6 @@ describe("key cipher", () => {
   });
 
   it("returns the last four characters", () => {
-    expect(lastFour("sk-ant-abcd1234")).toBe("1234");
+    expect(lastFour("sk-or-abcd1234")).toBe("1234");
   });
 });

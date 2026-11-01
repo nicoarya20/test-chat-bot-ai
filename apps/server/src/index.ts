@@ -1,7 +1,7 @@
 import { createApp } from "./app";
 import { createAuth } from "./auth/auth";
-import { AnthropicGateway } from "./chat/anthropic.gateway";
 import { createChatService } from "./chat/chat.service";
+import { createOpenRouterGateway } from "./chat/openrouter.gateway";
 import { loadEnv } from "./config/env";
 import { createDb } from "./db/client";
 import { log } from "./logging/logger";
@@ -14,12 +14,13 @@ const { db } = createDb(env.DATABASE_URL);
 const auth = createAuth(db, env);
 const quota = { tzOffsetMinutes: env.QUOTA_TZ_OFFSET_MINUTES, sessionWindowHours: env.SESSION_WINDOW_HOURS };
 
-const chat = createChatService(db, new AnthropicGateway(), {
+const gateway = createOpenRouterGateway({ baseUrl: env.OPENROUTER_BASE_URL, timeoutMs: env.CHAT_TIMEOUT_MS });
+const chat = createChatService(db, gateway, {
   encryptionKey: env.KEY_ENCRYPTION_KEY,
   quota,
   minOutputTokens: env.CHAT_MIN_OUTPUT_TOKENS,
   maxOutputTokens: env.CHAT_MAX_OUTPUT_TOKENS,
-  effort: env.CHAT_EFFORT,
+  reasoningEffort: env.CHAT_REASONING_EFFORT,
 });
 
 const app = createApp({

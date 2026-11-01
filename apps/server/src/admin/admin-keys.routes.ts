@@ -13,7 +13,7 @@ const createBody = z.object({
   apiKey: z.string().trim().min(API_KEY_MIN_LENGTH).max(500),
 });
 
-/** Admin management of Anthropic API keys; secrets are write-only. */
+/** Admin management of OpenRouter API keys; secrets are write-only. */
 export function adminKeyRoutes(db: Database, encryptionKey: string) {
   return new Hono<AppEnv>()
     .get("/", async (c) => c.json({ items: await listKeys(db) }))

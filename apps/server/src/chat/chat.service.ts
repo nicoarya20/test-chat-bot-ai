@@ -1,5 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages";
 import type { Database } from "../db/client";
 import { decryptSecret } from "../keys/key.cipher";
 import { getActiveKeyCiphertext } from "../keys/keys.repository";
@@ -8,16 +6,19 @@ import {
   ensureSessionWindow, getQuotaStatus, recordUsage, type QuotaConfig, type QuotaStatus,
 } from "../quota/quota.service";
 import { replyTokenBudget } from "../quota/quota.window";
-import { ChatError } from "./chat.errors";
-import type { ChatModelGateway, ModelCallInput, ModelCallResult } from "./anthropic.gateway";
+import { getSettings } from "../settings/settings.repository";
+import { ChatError, type ChatErrorCode } from "./chat.errors";
 import { appendExchange, getConversation, getHistory } from "./conversations.repository";
+import {
+  UpstreamError, type ChatModelGateway, type ModelCallResult, type ReasoningEffort,
+} from "./openrouter.gateway";
 
 export interface ChatServiceConfig {
   encryptionKey: string;
   quota: QuotaConfig;
   minOutputTokens: number;
   maxOutputTokens: number;
-  effort: ModelCallInput["effort"];
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface SendInput {
@@ -30,21 +31,24 @@ export interface SendInput {
 export interface SendResult {
   assistantMessageId: string;
   text: string;
-  stopReason: ModelCallResult["stopReason"];
+  finishReason: string | null;
   quota: QuotaStatus;
 }
 
+// OpenRouter HTTP error codes -> stable chat error codes.
+const UPSTREAM_STATUS_CODES: Record<number, ChatErrorCode> = {
+  401: "upstream_auth",
+  403: "upstream_auth",
+  402: "upstream_credits",
+  404: "model_unavailable",
+  429: "upstream_rate_limited",
+};
+
 function toUpstreamError(error: unknown, context: string): ChatError {
-  if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
-    return new ChatError("upstream_auth", `${context}: Anthropic rejected the API key (${error.status})`);
+  if (error instanceof UpstreamError) {
+    return new ChatError(UPSTREAM_STATUS_CODES[error.status] ?? "upstream_error", `${context}: ${error.message}`);
   }
-  if (error instanceof Anthropic.RateLimitError) {
-    return new ChatError("upstream_rate_limited", `${context}: Anthropic rate limit reached`);
-  }
-  if (error instanceof Anthropic.APIError) {
-    return new ChatError("upstream_error", `${context}: Anthropic API error ${error.status ?? "n/a"}: ${error.message}`);
-  }
-  const reason = error instanceof Error ? error.message : String(error);
+  const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   return new ChatError("upstream_error", `${context}: ${reason}`);
 }
 
@@ -67,25 +71,21 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
         });
       }
       const ciphertext = await getActiveKeyCiphertext(db);
-      if (!ciphertext) throw new ChatError("no_api_key", "No active Anthropic API key configured");
+      if (!ciphertext) throw new ChatError("no_api_key", "No active OpenRouter API key configured");
       const apiKey = decryptSecret(ciphertext, config.encryptionKey);
+      const settings = await getSettings(db);
 
       await ensureSessionWindow(db, input.userId, config.quota);
       const history = await getHistory(db, conversation.id);
-      const userContent = [{ type: "text" as const, text: input.text }];
-      const messages: BetaMessageParam[] = [
-        // content is the exact block array the API returned/accepted earlier (jsonb).
-        ...history.map((m) => ({ role: m.role, content: m.content }) as BetaMessageParam),
-        { role: "user", content: userContent },
-      ];
       const remaining = Math.min(quota.sessionRemaining, quota.weeklyRemaining);
 
       let result: ModelCallResult;
       try {
         result = await gateway.stream({
-          apiKey, model: conversation.model, system: conversation.systemPrompt, messages,
+          apiKey, model: settings.model, system: settings.systemPrompt,
+          messages: [...history, { role: "user", content: input.text }],
           maxTokens: replyTokenBudget(remaining, config.minOutputTokens, config.maxOutputTokens),
-          effort: config.effort,
+          reasoningEffort: config.reasoningEffort,
         }, input.onText);
       } catch (error) {
         const chatError = toUpstreamError(error, `Model call failed for conversation ${conversation.id}`);
@@ -93,18 +93,16 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
         throw chatError;
       }
 
-      // Billed even when refused, so usage is always recorded.
-      await recordUsage(db, { userId: input.userId, conversationId: conversation.id, model: conversation.model, ...result.usage });
-      if (result.stopReason === "refusal") {
+      // Billed even when filtered, so usage is always recorded.
+      await recordUsage(db, { userId: input.userId, conversationId: conversation.id, model: settings.model, ...result.usage });
+      if (result.finishReason === "content_filter") {
         throw new ChatError("refused", "The model declined this request");
       }
       const { assistantMessageId } = await appendExchange(db, {
-        conversationId: conversation.id,
-        user: { content: userContent, text: input.text },
-        assistant: { content: result.content, text: result.text },
+        conversationId: conversation.id, userText: input.text, assistantText: result.text,
       });
       const after = await getQuotaStatus(db, input.userId, config.quota);
-      return { assistantMessageId, text: result.text, stopReason: result.stopReason, quota: after };
+      return { assistantMessageId, text: result.text, finishReason: result.finishReason, quota: after };
     } finally {
       inFlight.delete(input.userId);
     }
