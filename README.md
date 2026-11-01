@@ -1,7 +1,7 @@
 # Chat — Claude-style chatbot
 
 Chat web app with a Claude-like UI. Users sign in with Google; new accounts wait for
-admin approval. Admins manage the Anthropic API key, the model, the system prompt, and
+admin approval. Admins manage the OpenRouter API key, the model, the system prompt, and
 per-user token limits (a 5-hour session window plus a weekly cap).
 
 ## Stack
@@ -11,7 +11,7 @@ per-user token limits (a 5-hour session window plus a weekly cap).
 | Web (`apps/web`) | Vite, React 19, React Router, Tailwind CSS v4 |
 | Server (`apps/server`) | Bun, Hono, Better Auth (Google), Drizzle ORM |
 | Database | Local PostgreSQL |
-| AI | `@anthropic-ai/sdk` (streaming, server-side refusal fallback) |
+| AI | [OpenRouter](https://openrouter.ai) Chat Completions (streamed over SSE, plain `fetch`) |
 
 In development the browser only talks to Vite (`:5173`), which proxies `/api` to the
 server (`:3000`), so cookies and OAuth stay same-origin.
@@ -39,19 +39,24 @@ In Google Cloud Console → APIs & Services → Credentials → *Create OAuth cl
 ### First run
 
 Sign in with an email listed in `ADMIN_EMAILS`, open **Panel admin → API Key**, and add an
-Anthropic key. Chat stays unavailable until a key is active.
+OpenRouter key (create one at https://openrouter.ai/settings/keys). Chat stays unavailable
+until a key is active.
+
+The default model is `nvidia/nemotron-3-ultra-550b-a55b:free`. Keep the `:free` suffix:
+the bare slug is the paid endpoint. Free models are rate-limited per key, and all users
+share the one active key. Change the model in **Panel admin → Pengaturan** using any slug
+from https://openrouter.ai/models.
 
 ## How limits work
 
 - **Session (5 hours):** a window opens at a user's first message and lasts `SESSION_WINDOW_HOURS`. When it ends, the next message opens a new window with a full allowance.
 - **Weekly:** resets every Monday 00:00 at `QUOTA_TZ_OFFSET_MINUTES` (default 420 = WIB; use 480 for WITA).
-- Both must have room before a message is sent. Usage is input + output + cache tokens, as reported by Anthropic.
+- Both must have room before a message is sent. Usage is prompt + completion tokens as reported by OpenRouter (estimated from text length if a response omits usage).
 - A reply that starts is allowed to finish (`max_tokens` never drops below `CHAT_MIN_OUTPUT_TOKENS`), so a user can go slightly over; the next message is then blocked.
 - Limits are per user. An empty value falls back to the defaults in **Panel admin → Pengaturan**.
 
-The model and system prompt are frozen per conversation. Changing them affects new
-conversations only, because replaying history to a different prompt would invalidate
-Claude's stored thinking blocks.
+Model and system prompt changes apply from the next message, including in existing
+conversations. History is sent to the model as plain text turns.
 
 ## Tests
 
