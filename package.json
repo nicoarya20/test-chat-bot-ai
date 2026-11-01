@@ -6,11 +6,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev:server": "bun --cwd apps/server run dev",
-    "dev:web": "bun --cwd apps/web run dev",
-    "test": "bun --cwd apps/server run test && bun --cwd apps/web run test",
-    "typecheck": "bun --cwd apps/server run typecheck && bun --cwd apps/web run typecheck",
-    "db:generate": "bun --cwd apps/server run db:generate",
-    "db:migrate": "bun --cwd apps/server run db:migrate"
+    "dev:server": "bun run --cwd apps/server dev",
+    "dev:web": "bun run --cwd apps/web dev",
+    "test": "bun run --cwd apps/server test && bun run --cwd apps/web test",
+    "typecheck": "bun run --cwd apps/server typecheck && bun run --cwd apps/web typecheck",
+    "db:generate": "bun run --cwd apps/server db:generate",
+    "db:migrate": "bun run --cwd apps/server db:migrate"
   }
 }
