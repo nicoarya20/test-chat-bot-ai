@@ -2,6 +2,7 @@ import { z } from "zod";
 import { REASONING_EFFORTS } from "../chat/openrouter.gateway";
 
 const TEN_MINUTES_MS = 600_000;
+const ONE_HOUR_MS = 3_600_000;
 
 const csv = z
   .string()
@@ -37,6 +38,8 @@ const envSchema = z.object({
   // Unset = no `reasoning` param (safest across models).
   CHAT_REASONING_EFFORT: z.enum(REASONING_EFFORTS).optional(),
   CHAT_TIMEOUT_MS: z.coerce.number().int().positive().default(TEN_MINUTES_MS),
+  // How long the free-model list from OpenRouter is cached.
+  MODEL_CATALOG_TTL_MS: z.coerce.number().int().positive().default(ONE_HOUR_MS),
 });
 
 export type Env = z.infer<typeof envSchema>;

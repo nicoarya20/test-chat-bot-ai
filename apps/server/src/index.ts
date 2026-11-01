@@ -5,6 +5,7 @@ import { createOpenRouterGateway } from "./chat/openrouter.gateway";
 import { loadEnv } from "./config/env";
 import { createDb } from "./db/client";
 import { log } from "./logging/logger";
+import { createModelCatalog } from "./models/model.catalog";
 
 // Bun's maximum; SSE replies can idle while the model thinks (keepalive pings help too).
 const IDLE_TIMEOUT_SECONDS = 255;
@@ -15,7 +16,8 @@ const auth = createAuth(db, env);
 const quota = { tzOffsetMinutes: env.QUOTA_TZ_OFFSET_MINUTES, sessionWindowHours: env.SESSION_WINDOW_HOURS };
 
 const gateway = createOpenRouterGateway({ baseUrl: env.OPENROUTER_BASE_URL, timeoutMs: env.CHAT_TIMEOUT_MS });
-const chat = createChatService(db, gateway, {
+const catalog = createModelCatalog({ baseUrl: env.OPENROUTER_BASE_URL, ttlMs: env.MODEL_CATALOG_TTL_MS });
+const chat = createChatService(db, gateway, catalog, {
   encryptionKey: env.KEY_ENCRYPTION_KEY,
   quota,
   minOutputTokens: env.CHAT_MIN_OUTPUT_TOKENS,
@@ -24,7 +26,7 @@ const chat = createChatService(db, gateway, {
 });
 
 const app = createApp({
-  db, chat, quota, encryptionKey: env.KEY_ENCRYPTION_KEY,
+  db, chat, catalog, quota, encryptionKey: env.KEY_ENCRYPTION_KEY,
   authHandler: (request) => auth.handler(request),
   resolveUserId: async (headers) => (await auth.api.getSession({ headers }))?.user.id ?? null,
 });

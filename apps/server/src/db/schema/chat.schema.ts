@@ -34,9 +34,18 @@ export const conversations = pgTable("conversations", {
   id: uuid().primaryKey().defaultRandom(),
   userId: text().notNull().references(() => user.id, { onDelete: "cascade" }),
   title: text().notNull(),
+  // OpenRouter slug chosen by the user; null = the admin default model.
+  model: text(),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("conversations_user_updated_idx").on(t.userId, t.updatedAt)]);
+
+/** Free OpenRouter models an admin lets users pick (the default model is always allowed). */
+export const allowedModels = pgTable("allowed_models", {
+  slug: text().primaryKey(),
+  createdBy: text().references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
 
 export const MESSAGE_ROLES = ["user", "assistant"] as const;
 

@@ -17,7 +17,7 @@ export async function listConversations(db: Database, userId: string, page: Page
     .offset(page.offset);
 }
 
-interface NewConversation { userId: string; title: string }
+interface NewConversation { userId: string; title: string; model?: string | null }
 
 /** Creates a conversation owned by the user. */
 export async function createConversation(db: Database, input: NewConversation): Promise<Conversation> {
@@ -33,9 +33,11 @@ export async function getConversation(db: Database, userId: string, id: string):
   return row ?? null;
 }
 
-/** Renames a conversation owned by the user; returns false if not found. */
-export async function renameConversation(db: Database, userId: string, id: string, title: string): Promise<boolean> {
-  const rows = await db.update(conversations).set({ title })
+export type ConversationPatch = Partial<Pick<Conversation, "title" | "model">>;
+
+/** Renames and/or changes the model of a conversation owned by the user; returns false if not found. */
+export async function updateConversation(db: Database, userId: string, id: string, patch: ConversationPatch): Promise<boolean> {
+  const rows = await db.update(conversations).set(patch)
     .where(and(eq(conversations.id, id), eq(conversations.userId, userId)))
     .returning({ id: conversations.id });
   return rows.length > 0;

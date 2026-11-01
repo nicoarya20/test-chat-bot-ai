@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createApp } from "../../src/app";
 import { createChatService } from "../../src/chat/chat.service";
+import { FakeCatalog } from "./fake.catalog";
 import { FakeGateway } from "./fake.gateway";
 import { testDb } from "./db";
 
@@ -12,12 +13,13 @@ export const testEncryptionKey = randomBytes(32).toString("base64"); // test-onl
 export function buildTestApp() {
   const db = testDb();
   const gateway = new FakeGateway();
-  const chat = createChatService(db, gateway, {
+  const catalog = new FakeCatalog();
+  const chat = createChatService(db, gateway, catalog, {
     encryptionKey: testEncryptionKey, quota: testQuota,
     minOutputTokens: 4096, maxOutputTokens: 64000, reasoningEffort: "low",
   });
   const app = createApp({
-    db, chat, quota: testQuota, encryptionKey: testEncryptionKey,
+    db, chat, catalog, quota: testQuota, encryptionKey: testEncryptionKey,
     resolveUserId: async (headers) => headers.get(TEST_USER_HEADER),
     authHandler: async () => new Response("auth stub", { status: 200 }),
   });
@@ -28,7 +30,7 @@ export function buildTestApp() {
     if (init.body) headers.set("content-type", "application/json");
     return app.request(`/api${path}`, { ...init, headers });
   }
-  return { app, db, gateway, request };
+  return { app, db, gateway, catalog, request };
 }
 
 // any: test-only parsed JSON; each assertion checks the fields it needs.

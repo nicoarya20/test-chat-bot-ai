@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Database } from "../db/client";
 import { DEFAULT_MODEL } from "../db/schema";
 import type { AppEnv } from "../http/app.types";
+import type { ModelCatalog } from "../models/model.catalog";
 import { getSettings, updateSettings } from "../settings/settings.repository";
 import { TOKEN_LIMIT_MAX } from "./admin-users.routes";
 
@@ -18,11 +19,16 @@ const settingsBody = z.object({
   defaultWeeklyTokenLimit: limit.optional(),
 }).refine((b) => Object.keys(b).length > 0, { message: "No fields to update" });
 
-/** Admin chat settings; model and system prompt apply from the next message on. */
-export function adminSettingsRoutes(db: Database) {
+/** Admin chat settings; model and system prompt apply from the next message on. The model must be free. */
+export function adminSettingsRoutes(db: Database, catalog: ModelCatalog) {
   return new Hono<AppEnv>()
     .get("/", async (c) => c.json({ settings: await getSettings(db), defaultModel: DEFAULT_MODEL }))
     .put("/", zValidator("json", settingsBody), async (c) => {
-      return c.json({ settings: await updateSettings(db, c.req.valid("json")) });
+      const patch = c.req.valid("json");
+      if (patch.model) {
+        const free = await catalog.listFreeModels();
+        if (!free.some((m) => m.id === patch.model)) return c.json({ error: "model_not_free", models: [patch.model] }, 400);
+      }
+      return c.json({ settings: await updateSettings(db, patch) });
     });
 }

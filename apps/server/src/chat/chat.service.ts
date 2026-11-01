@@ -6,6 +6,9 @@ import {
   ensureSessionWindow, getQuotaStatus, recordUsage, type QuotaConfig, type QuotaStatus,
 } from "../quota/quota.service";
 import { replyTokenBudget } from "../quota/quota.window";
+import { CatalogUnavailableError, type ModelCatalog } from "../models/model.catalog";
+import { getModelChoices } from "../models/model.choices";
+import { resolveChatModel } from "../models/model.policy";
 import { getSettings } from "../settings/settings.repository";
 import { ChatError, type ChatErrorCode } from "./chat.errors";
 import { appendExchange, getConversation, getHistory } from "./conversations.repository";
@@ -33,6 +36,9 @@ export interface SendResult {
   text: string;
   finishReason: string | null;
   quota: QuotaStatus;
+  /** Model that answered; `fellBack` = the conversation's choice was no longer usable. */
+  model: string;
+  fellBack: boolean;
 }
 
 // OpenRouter HTTP error codes -> stable chat error codes.
@@ -55,8 +61,24 @@ function toUpstreamError(error: unknown, context: string): ChatError {
   return new ChatError("upstream_error", `${context}: ${reason}`);
 }
 
+/** Free-only guard: the conversation's model if still allowed and free, else the (free) admin default. */
+async function pickModel(db: Database, catalog: ModelCatalog, requested: string | null) {
+  let choices;
+  try {
+    choices = await getModelChoices(db, catalog);
+  } catch (error) {
+    if (error instanceof CatalogUnavailableError) throw new ChatError("catalog_unavailable", error.message);
+    throw error;
+  }
+  const resolution = resolveChatModel({ requested, ...choices });
+  if (!resolution.ok) {
+    throw new ChatError("model_not_free", `Default model ${choices.defaultModel} is not currently free on OpenRouter`);
+  }
+  return resolution;
+}
+
 /** Builds the chat service; one in-flight reply per user (single-process lock). */
-export function createChatService(db: Database, gateway: ChatModelGateway, config: ChatServiceConfig) {
+export function createChatService(db: Database, gateway: ChatModelGateway, catalog: ModelCatalog, config: ChatServiceConfig) {
   // Serializes sends per user so parallel requests cannot overspend the quota.
   // Assumes a single server process; multi-instance needs a DB/Redis lock.
   const inFlight = new Set<string>();
@@ -77,6 +99,7 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
       if (!ciphertext) throw new ChatError("no_api_key", "No active OpenRouter API key configured");
       const apiKey = decryptSecret(ciphertext, config.encryptionKey);
       const settings = await getSettings(db);
+      const { model, fellBack } = await pickModel(db, catalog, conversation.model);
 
       await ensureSessionWindow(db, input.userId, config.quota);
       const history = await getHistory(db, conversation.id);
@@ -85,7 +108,7 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
       let result: ModelCallResult;
       try {
         result = await gateway.stream({
-          apiKey, model: settings.model, system: settings.systemPrompt,
+          apiKey, model, system: settings.systemPrompt,
           messages: [...history, { role: "user", content: input.text }],
           maxTokens: replyTokenBudget(remaining, config.minOutputTokens, config.maxOutputTokens),
           reasoningEffort: config.reasoningEffort,
@@ -93,7 +116,7 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
       } catch (error) {
         const chatError = toUpstreamError(error, `Model call failed for conversation ${conversation.id}`);
         log.error("model call failed", {
-          userId: input.userId, conversationId: conversation.id, model: settings.model, code: chatError.code,
+          userId: input.userId, conversationId: conversation.id, model, code: chatError.code,
           upstreamStatus: error instanceof UpstreamError ? error.status : null,
           // Provider error text only (no user content); needed to diagnose upstream failures.
           reason: error instanceof Error ? error.message.slice(0, 300) : String(error),
@@ -102,7 +125,7 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
       }
 
       // Billed even when filtered, so usage is always recorded.
-      await recordUsage(db, { userId: input.userId, conversationId: conversation.id, model: settings.model, ...result.usage });
+      await recordUsage(db, { userId: input.userId, conversationId: conversation.id, model, ...result.usage });
       if (result.finishReason === "content_filter") {
         throw new ChatError("refused", "The model declined this request");
       }
@@ -110,7 +133,7 @@ export function createChatService(db: Database, gateway: ChatModelGateway, confi
         conversationId: conversation.id, userText: input.text, assistantText: result.text,
       });
       const after = await getQuotaStatus(db, input.userId, config.quota);
-      return { assistantMessageId, text: result.text, finishReason: result.finishReason, quota: after };
+      return { assistantMessageId, text: result.text, finishReason: result.finishReason, quota: after, model, fellBack };
     } finally {
       inFlight.delete(input.userId);
     }
